@@ -1,3 +1,27 @@
+/*
+ * Analisador Léxico para C#
+ * 
+ * Este código implementa um analisador léxico (scanner) que identifica e classifica
+ * tokens em código fonte C#. Ele processa o texto de entrada e gera uma sequência
+ * de tokens classificados.
+ * 
+ * Características principais:
+ * - Reconhece 20 palavras reservadas do C#
+ * - Processa identificadores, números, strings e operadores
+ * - Mantém controle de linha para rastreamento de erros
+ * - Suporta comentários de linha (//) e bloco (/*)
+ * - Detecta tokens desconhecidos para análise de erro
+ * 
+ * Estruturas principais:
+ * - TokenType: Enumera todos os tipos possíveis de tokens
+ * - Token: Estrutura que armazena informações de cada token
+ *   (valor, linha, tipo e tamanho em bytes)
+ * 
+ * Limitações:
+ * - Máximo de 1000 tokens por arquivo
+ * - Tamanho máximo de 100 caracteres por token
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +48,7 @@ typedef enum {
     OPEN_BRACKET,
     CLOSE_BRACKET,
     COMPARATOR,
+    QUOTE,           // Novo tipo para aspas
     UNKNOWN
 } TokenType;
 
@@ -36,8 +61,12 @@ typedef struct {
 } Token;
 
 // Lista de palavras-chave e tipos
-const char *keywords[] = {"if", "else", "while", "for", "return", "break", "continue", "switch", "case", "default"};
-const char *types[] = {"int", "float", "char", "double", "void", "long", "short", "signed", "unsigned"};
+const char *keywords[] = {
+    "if", "else", "while", "for", "return",
+    "class", "public", "private", "static",
+    "void", "using", "namespace", "new", "try", "catch"
+};
+const char *types[] = {"int", "float", "double", "char", "bool"};
 
 // Variáveis globais
 Token tokens[MAX_TOKENS];
@@ -71,6 +100,31 @@ void addToken(const char *value, int line, TokenType type) {
     token->line = line;
     token->type = type;
     token->size = strlen(value); // Armazena o tamanho do token
+}
+
+// Função para converter TokenType em string
+const char* tokenTypeToString(TokenType type) {
+    switch (type) {
+        case KEYWORD: return "KEYWORD";
+        case TYPE: return "TYPE";
+        case IDENTIFIER: return "IDENTIFIER";
+        case NUM_LITERAL: return "NUM_LITERAL";
+        case STRING_LITERAL: return "STRING_LITERAL";
+        case SEMICOLON: return "SEMICOLON";
+        case COMMA: return "COMMA";
+        case OPERATOR: return "OPERATOR";
+        case ASSIGNMENT: return "ASSIGNMENT";
+        case OPEN_PARENTHESIS: return "OPEN_PARENTHESIS";
+        case CLOSE_PARENTHESIS: return "CLOSE_PARENTHESIS";
+        case OPEN_BRACE: return "OPEN_BRACE";
+        case CLOSE_BRACE: return "CLOSE_BRACE";
+        case OPEN_BRACKET: return "OPEN_BRACKET";
+        case CLOSE_BRACKET: return "CLOSE_BRACKET";
+        case COMPARATOR: return "COMPARATOR";
+        case QUOTE: return "QUOTE";
+        case UNKNOWN: return "UNKNOWN";
+        default: return "UNKNOWN";
+    }
 }
 
 // Função principal de análise léxica
@@ -173,6 +227,14 @@ void lexicalAnalysis(const char *code) {
             continue;
         }
 
+        // Identificar aspas
+        if (*ptr == '"') {
+            char quote[2] = {*ptr, '\0'};
+            addToken(quote, lineNumber, QUOTE);
+            ptr++;
+            continue;
+        }
+
         // Verificador de Token desconhecido
         char unknown[2] = {*ptr, '\0'};
         addToken(unknown, lineNumber, UNKNOWN);
@@ -184,8 +246,8 @@ void lexicalAnalysis(const char *code) {
 void printTokens() {
     printf("\nTokens encontrados:\n");
     for (int i = 0; i < tokenCount; i++) {
-        printf("Token: %-15s Linha: %-4d Tipo: %-2d Tamanho: %-3d Byte\n",
-               tokens[i].value, tokens[i].line, tokens[i].type, tokens[i].size);
+        printf("Token: %-15s Linha: %-4d Tipo: %-19s Tamanho: %-3d Byte\n",
+               tokens[i].value, tokens[i].line, tokenTypeToString(tokens[i].type), tokens[i].size);
     }
 }
 
